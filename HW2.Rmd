@@ -1,0 +1,116 @@
+---
+title: "HW2"
+author: "Samane Khademi"
+output: html_document
+date: "2022-09-09"
+---
+# Link on [GitHub](https://github.com/Samane86/607_HW2)
+
+
+
+In this workbook I have create a data set by asking my family and friends to rate the six recent popular movies that they have seen on a scale of 1 to 5. I create this data set in MySQL database. I have attached a file of sql file in this repository so you can easily generate the table first.
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Loading libraries:
+
+```{r}
+library(RMySQL)
+library(tidyverse)
+library(ggplot2)
+```
+
+
+# Connect MySQL to R
+
+Create a connection Object to MySQL database. Then connect to any sample database, here we are connecting to a database named "rating". dbconnect(MySQL(), dbname, host, port, user, password) where, 
+dbname - name of the database which we want to use, in this case :'rating'
+host - the host name used while creating the connection to server in MySQL. 
+user - the username name defined while making the connection to server. password - the password set while making the connection to the server.
+
+```{r}
+mysqlconnection = dbConnect(RMySQL::MySQL(),
+                            dbname='rating',
+                            host='localhost',
+                            port=3306,
+                            user='root',
+                            password='Samane1365')
+```
+
+# Write some SQL queries
+
+In this step we want to write query to access the records from a particular table in this case "movies".
+
+```{r}
+result = dbSendQuery(mysqlconnection, "select * from movies")
+
+```
+
+Now we have the table in result variable, Let's store the result in a R data frame object. n = 10 is used to fetch first 10 rows. And then let's take a look at our data frame, Since it is not a big one, we cal see it all.
+
+```{r}
+df = fetch(result, n = 10)
+print(df)
+```
+
+# Null values:
+Let's see how many null values do we have in each column of our data set. 
+
+```{r}
+colSums(is.na(df))
+```
+ So we have missing values in all columns.
+ 
+### Missing values can be treated using a couple of methods.
+
+# Deletion: 
+If the NULL values are less than 5 percent of our whole data, we can omit the rows which contain NA with "na.omit()" function, But sometimes the dataset is small and we do not want to loose a single row.  In this case we can exclude the NULL value in our calculations like mean, median and mode using "na.rm = TRUE" in our functions.
+
+# Imputation: 
+It is a method to fill in the missing values with estimated ones. The objective is to employ known relationships that can be identified in the valid values of the data set to assist in estimating the missing values. Mean / Mode / Median imputation is one of the most frequently used methods. It consists of replacing the missing data for a given attribute by the mean or median (quantitative attribute) or mode (qualitative attribute) of all known values of that variable.
+
+Approach for categorical variables is different, We can create a new category for the missing values like "other" or "unknown". Or we can try to find a suitable category among the existing ones and put it in place of the missing values.
+
+In our problem, Since the data set is small, Imputation isn't a good idea because in each row, we have different people and their opinions about one movie can be very different with each other, I think the best approach is ignoring missing values and do calculation for each movie by excluding NULL values. 
+
+But first let's pick a subset of data set, we don't need the participants name so let;s drop them.
+
+```{r}
+df = df[,c(2,3,4,5,6,7)]
+df
+```
+
+
+I want to see what is the mean value of rates for each movie. For calculating mean, we should exclude Null values using na.rm = TRUE in mean() function.
+
+```{r}
+df <- as.data.frame(t(df))
+df <- df%>%
+mutate(rmean=rowMeans(df,na.rm = TRUE),movies =c("Sea_beast","The_Territory","Marcel_the_Shell","Me_Time","Turning_Red","Spider_Man"))
+df
+```
+
+
+Let's visualize the result in a descending order:
+
+```{r}
+ggplot(data = df, aes(x = reorder(movies,-rmean),y =rmean ))+
+  geom_bar(stat = "identity",fill="steelblue")+
+  geom_text(aes(label=round(rmean,2)), vjust=1.6, color="white", size=3.5)+
+  xlab("Movie") + ylab("Score")
+```
+
+
+
+# Interpretation:
+
+It seems the movie "Turning Red" was the most popular ones among my family and friends.
+
+
+
+
+
+
